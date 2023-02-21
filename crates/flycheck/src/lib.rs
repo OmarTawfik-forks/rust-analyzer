@@ -444,15 +444,10 @@ impl CargoActor {
         // Because cargo only outputs one JSON object per line, we can
         // simply skip a line if it doesn't parse, which just ignores any
         // erroneous output.
-
-        let mut error = String::new();
-        let mut read_at_least_one_message = false;
-        let output = streaming_output(
-            self.stdout,
-            self.stderr,
-            &mut |line| {
-                read_at_least_one_message = true;
-
+        let try_process_json = |chunk: &str| {
+            for line in chunk.lines() {
+                // Build tasks pad output with whitespace:
+                let line = line.trim();
                 // Try to deserialize a message from Cargo or Rustc.
                 let mut deserializer = serde_json::Deserializer::from_str(line);
                 deserializer.disable_recursion_limit();
@@ -475,10 +470,22 @@ impl CargoActor {
                         }
                     }
                 }
+            }
+        };
+
+        let mut error = String::new();
+        let mut read_at_least_one_message = false;
+        let output = streaming_output(
+            self.stdout,
+            self.stderr,
+            &mut |chunk| {
+                read_at_least_one_message = true;
+                try_process_json(chunk);
             },
-            &mut |line| {
-                error.push_str(line);
+            &mut |chunk| {
+                error.push_str(chunk);
                 error.push('\n');
+                try_process_json(chunk);
             },
         );
         match output {
