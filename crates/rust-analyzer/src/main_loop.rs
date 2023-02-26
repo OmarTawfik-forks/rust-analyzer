@@ -547,6 +547,8 @@ impl GlobalState {
                             diag.fix,
                         ),
                         Err(err) => {
+                            // try_to_add_yourself_if_it_doesnot_exist();
+
                             tracing::error!(
                                 "flycheck {id}: File with cargo diagnostic not found in VFS: {}",
                                 err
